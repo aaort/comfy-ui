@@ -7,6 +7,7 @@ import ReactFlow, {
   Controls,
   Edge,
   MiniMap,
+  OnSelectionChangeFunc,
   Panel,
   ReactFlowProvider,
   useEdgesState,
@@ -19,6 +20,9 @@ import { BottomPanel } from './components/panels/BottomPanel'
 import { LeftPanel } from './components/panels/LeftPanel'
 import { RightPanel } from './components/panels/RightPanel'
 import { TopToolbar } from './components/panels/TopToolbar'
+
+import { ThemeProvider } from './contexts/ThemeProvider'
+import { useGlobalShortcuts } from './hooks/useGlobalShortcuts'
 
 // Import custom nodes
 import CharacterNode from './components/nodes/CharacterNode'
@@ -52,7 +56,10 @@ const nodeTypes = {
   storyboard: StoryboardNode
 } as const
 
-function App() {
+function AppContent() {
+  // Global shortcuts
+  const { registerHandler } = useGlobalShortcuts()
+
   // Project state
   const [currentProject, setCurrentProject] = useState<Project | null>(null)
 
@@ -182,9 +189,13 @@ function App() {
     event.dataTransfer.dropEffect = 'move'
   }, [])
 
-  const onSelectionChange = useCallback(({ nodes }: { nodes: WorkflowNode[] }) => {
-    setSelectedNodes(nodes.map((n) => n.id))
-  }, [])
+  const onSelectionChange: OnSelectionChangeFunc = useCallback(
+    (params: { nodes: unknown[]; edges: unknown[] }) => {
+      // @ts-expect-error n is not defined
+      setSelectedNodes(params.nodes.map((n) => n.id))
+    },
+    []
+  )
 
   // Panel toggles
   const togglePanel = useCallback((panel: keyof PanelState) => {
@@ -222,6 +233,13 @@ function App() {
       })
     }
   }, [currentProject])
+
+  // Register handlers for built-in shortcuts
+  useEffect(() => {
+    // The theme switcher shortcut is already registered in the main process
+    // We just need to register a handler (but it's handled by the ThemeContext)
+    // This is here for any additional shortcuts you might want to add
+  }, [registerHandler])
 
   return (
     <ReactFlowProvider>
@@ -347,6 +365,14 @@ function App() {
         )}
       </div>
     </ReactFlowProvider>
+  )
+}
+
+function App() {
+  return (
+    <ThemeProvider>
+      <AppContent />
+    </ThemeProvider>
   )
 }
 

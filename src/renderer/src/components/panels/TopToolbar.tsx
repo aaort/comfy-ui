@@ -2,8 +2,8 @@ import {
   Download,
   FolderOpen,
   HelpCircle,
+  Keyboard,
   Menu,
-  Moon,
   PanelBottom,
   PanelLeft,
   PanelRight,
@@ -12,7 +12,6 @@ import {
   RotateCcw,
   Save,
   Settings,
-  Sun,
   Upload
 } from 'lucide-react'
 import { useCallback, useState } from 'react'
@@ -31,6 +30,8 @@ import {
   DropdownMenuShortcut,
   DropdownMenuTrigger
 } from '../ui/dropdown-menu'
+import { ShortcutsInfo } from '../ui/ShortcutsInfo'
+import { ThemeToggle } from '../ui/ThemeToggle'
 
 interface TopToolbarProps {
   project: Project | null
@@ -46,7 +47,7 @@ export function TopToolbar({
   panelState
 }: TopToolbarProps) {
   const [isGenerating, setIsGenerating] = useState(false)
-  const [isDarkMode, setIsDarkMode] = useState(true)
+  const [showShortcuts, setShowShortcuts] = useState(false)
 
   const handleNewProject = useCallback(() => {
     const newProject: Project = {
@@ -86,11 +87,13 @@ export function TopToolbar({
     console.log('Generating...', isGenerating)
   }, [isGenerating])
 
-  const toggleTheme = useCallback(() => {
-    setIsDarkMode(!isDarkMode)
-    // In a real app, this would update the theme
-    document.documentElement.classList.toggle('dark')
-  }, [isDarkMode])
+  const handleShowShortcuts = useCallback(() => {
+    setShowShortcuts(true)
+  }, [])
+
+  const handleHideShortcuts = useCallback(() => {
+    setShowShortcuts(false)
+  }, [])
 
   return (
     <div className="flex h-14 items-center justify-between border-b border-border bg-card px-4">
@@ -239,9 +242,7 @@ export function TopToolbar({
         <div className="mx-2 h-8 w-px bg-border" />
 
         {/* Theme toggle */}
-        <Button variant="ghost" size="icon" onClick={toggleTheme} title="Toggle theme">
-          {isDarkMode ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
-        </Button>
+        <ThemeToggle />
 
         {/* Settings */}
         <DropdownMenu>
@@ -257,7 +258,10 @@ export function TopToolbar({
               Preferences
               <DropdownMenuShortcut>⌘,</DropdownMenuShortcut>
             </DropdownMenuItem>
-            <DropdownMenuItem>Keyboard Shortcuts</DropdownMenuItem>
+            <DropdownMenuItem onClick={handleShowShortcuts}>
+              <Keyboard className="mr-2 h-4 w-4" />
+              Keyboard Shortcuts
+            </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuCheckboxItem checked>Auto-save</DropdownMenuCheckboxItem>
             <DropdownMenuCheckboxItem checked>Show grid</DropdownMenuCheckboxItem>
@@ -272,6 +276,9 @@ export function TopToolbar({
           <HelpCircle className="h-4 w-4" />
         </Button>
       </div>
+
+      {/* Shortcuts Info Modal */}
+      <ShortcutsInfo isOpen={showShortcuts} onClose={handleHideShortcuts} />
     </div>
   )
 }

@@ -131,6 +131,10 @@ export interface CharacterNodeData {
   description: string
   expression?: string
   visualReference?: string
+  outfit?: string
+  referenceImages?: Image[]
+  isProcessing?: boolean
+  error?: string
 }
 
 export interface SceneNodeData {
@@ -142,6 +146,7 @@ export interface SceneNodeData {
   weather?: string
   mood?: string
   elements: string[]
+  error?: string
 }
 
 export interface DialogueNodeData {
@@ -150,6 +155,9 @@ export interface DialogueNodeData {
   text: string
   emotion?: string
   style?: 'speech' | 'thought' | 'narration' | 'sound-effect'
+  position?: 'top' | 'right' | 'bottom' | 'left'
+  isProcessing?: boolean
+  error?: string
 }
 
 export interface PanelLayoutNodeData {
@@ -159,6 +167,10 @@ export interface PanelLayoutNodeData {
   gutterSize: number
   panelOrder: number[]
   panelSizes?: number[]
+  layout?: 'single' | 'split-horizontal' | 'split-vertical' | 'grid' | 'staggered' | 'freeform'
+  panels?: Panel[]
+  isProcessing?: boolean
+  error?: string
 }
 
 export interface SequenceNodeData {
@@ -166,6 +178,9 @@ export interface SequenceNodeData {
   frames: Frame[]
   duration: number
   transition?: 'cut' | 'fade' | 'dissolve' | 'wipe'
+  fps?: number
+  isProcessing?: boolean
+  error?: string
 }
 
 export interface StoryboardNodeData {
@@ -174,9 +189,40 @@ export interface StoryboardNodeData {
   description: string
   duration: number
   shots: Shot[]
+  scenes?: Scene[]
+  isProcessing?: boolean
+  error?: string
 }
 
 // Supporting types
+export interface Image {
+  id: string
+  url: string
+  alt?: string
+  thumbnail?: string
+}
+
+export interface Panel {
+  id: string
+  content?: string
+  width?: number
+  height?: number
+  position?: {
+    width: number
+    height: number
+  }
+}
+
+export interface Scene {
+  id: string
+  title: string
+  description: string
+  duration: number
+  shots: Shot[]
+  thumbnail?: Image
+  dialogue?: string[]
+}
+
 export interface Frame {
   id: string
   content: string

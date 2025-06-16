@@ -54,7 +54,7 @@ export function RightPanel({
     | undefined
 
   const updateNodeData = useCallback(
-    (nodeId: string, data: Partial<any>) => {
+    (nodeId: string, data: Partial<unknown>) => {
       onNodesChange(
         nodes.map((node) =>
           node.id === nodeId ? { ...node, data: { ...node.data, ...data } } : node
@@ -341,7 +341,7 @@ function TextPromptProperties({
   node: WorkflowNode
   onUpdate: (id: string, data: Partial<TextPromptNodeData>) => void
 }) {
-  const data = node.data as TextPromptNodeData
+  const data = node.data as unknown as TextPromptNodeData
 
   return (
     <div className="space-y-4 p-4">
@@ -398,13 +398,12 @@ function TextPromptProperties({
 }
 
 function ImageInputProperties({
-  node,
-  onUpdate
+  node
 }: {
   node: WorkflowNode
   onUpdate: (id: string, data: Partial<ImageInputNodeData>) => void
 }) {
-  const data = node.data as ImageInputNodeData
+  const data = node.data as unknown as ImageInputNodeData
 
   return (
     <div className="space-y-4 p-4">
@@ -440,7 +439,7 @@ function VideoInputProperties({
   node: WorkflowNode
   onUpdate: (id: string, data: Partial<VideoInputNodeData>) => void
 }) {
-  const data = node.data as VideoInputNodeData
+  const data = node.data as unknown as VideoInputNodeData
 
   return (
     <div className="space-y-4 p-4">
@@ -489,7 +488,7 @@ function ImageOutputProperties({
   node: WorkflowNode
   onUpdate: (id: string, data: Partial<ImageOutputNodeData>) => void
 }) {
-  const data = node.data as ImageOutputNodeData
+  const data = node.data as unknown as ImageOutputNodeData
 
   return (
     <div className="space-y-4 p-4">
@@ -520,7 +519,9 @@ function ImageOutputProperties({
         <Label htmlFor="format">Format</Label>
         <Select
           value={data.format || 'png'}
-          onValueChange={(value) => onUpdate(node.id, { format: value as any })}
+          onValueChange={(value) =>
+            onUpdate(node.id, { format: value as ImageOutputNodeData['format'] })
+          }
         >
           <SelectTrigger id="format">
             <SelectValue />
@@ -559,7 +560,7 @@ function VideoOutputProperties({
   node: WorkflowNode
   onUpdate: (id: string, data: Partial<VideoOutputNodeData>) => void
 }) {
-  const data = node.data as VideoOutputNodeData
+  const data = node.data as unknown as VideoOutputNodeData
 
   return (
     <div className="space-y-4 p-4">
@@ -602,7 +603,9 @@ function VideoOutputProperties({
         <Label htmlFor="format">Format</Label>
         <Select
           value={data.format || 'mp4'}
-          onValueChange={(value) => onUpdate(node.id, { format: value as any })}
+          onValueChange={(value) =>
+            onUpdate(node.id, { format: value as VideoOutputNodeData['format'] })
+          }
         >
           <SelectTrigger id="format">
             <SelectValue />
@@ -641,7 +644,7 @@ function StyleReferenceProperties({
   node: WorkflowNode
   onUpdate: (id: string, data: Partial<StyleReferenceNodeData>) => void
 }) {
-  const data = node.data as StyleReferenceNodeData
+  const data = node.data as unknown as StyleReferenceNodeData
 
   return (
     <div className="space-y-4 p-4">
@@ -721,7 +724,7 @@ function CharacterProperties({
   node: WorkflowNode
   onUpdate: (id: string, data: Partial<CharacterNodeData>) => void
 }) {
-  const data = node.data as CharacterNodeData
+  const data = node.data as unknown as CharacterNodeData
 
   return (
     <div className="space-y-4 p-4">
@@ -817,7 +820,7 @@ function SceneProperties({
   node: WorkflowNode
   onUpdate: (id: string, data: Partial<SceneNodeData>) => void
 }) {
-  const data = node.data as SceneNodeData
+  const data = node.data as unknown as SceneNodeData
 
   return (
     <div className="space-y-4 p-4">
@@ -835,7 +838,9 @@ function SceneProperties({
         <Label htmlFor="time">Time of Day</Label>
         <Select
           value={data.timeOfDay || 'noon'}
-          onValueChange={(value) => onUpdate(node.id, { timeOfDay: value as any })}
+          onValueChange={(value) =>
+            onUpdate(node.id, { timeOfDay: value as SceneNodeData['timeOfDay'] })
+          }
         >
           <SelectTrigger id="time">
             <SelectValue />
@@ -895,7 +900,7 @@ function DialogueProperties({
   node: WorkflowNode
   onUpdate: (id: string, data: Partial<DialogueNodeData>) => void
 }) {
-  const data = node.data as DialogueNodeData
+  const data = node.data as unknown as DialogueNodeData
 
   return (
     <div className="space-y-4 p-4">
@@ -946,7 +951,9 @@ function DialogueProperties({
         <Label htmlFor="style">Style</Label>
         <Select
           value={data.style || 'speech'}
-          onValueChange={(value) => onUpdate(node.id, { style: value as any })}
+          onValueChange={(value) =>
+            onUpdate(node.id, { style: value as DialogueNodeData['style'] })
+          }
         >
           <SelectTrigger id="style">
             <SelectValue />
@@ -970,7 +977,7 @@ function PanelLayoutProperties({
   node: WorkflowNode
   onUpdate: (id: string, data: Partial<PanelLayoutNodeData>) => void
 }) {
-  const data = node.data as PanelLayoutNodeData
+  const data = node.data as unknown as PanelLayoutNodeData
 
   return (
     <div className="space-y-4 p-4">
@@ -1046,7 +1053,7 @@ function SequenceProperties({
   node: WorkflowNode
   onUpdate: (id: string, data: Partial<SequenceNodeData>) => void
 }) {
-  const data = node.data as SequenceNodeData
+  const data = node.data as unknown as SequenceNodeData
 
   return (
     <div className="space-y-4 p-4">
@@ -1066,7 +1073,9 @@ function SequenceProperties({
         <Label htmlFor="transition">Transition Type</Label>
         <Select
           value={data.transition || 'cut'}
-          onValueChange={(value) => onUpdate(node.id, { transition: value as any })}
+          onValueChange={(value) =>
+            onUpdate(node.id, { transition: value as SequenceNodeData['transition'] })
+          }
         >
           <SelectTrigger id="transition">
             <SelectValue />
@@ -1108,7 +1117,7 @@ function StoryboardProperties({
   node: WorkflowNode
   onUpdate: (id: string, data: Partial<StoryboardNodeData>) => void
 }) {
-  const data = node.data as StoryboardNodeData
+  const data = node.data as unknown as StoryboardNodeData
 
   return (
     <div className="space-y-4 p-4">
@@ -1156,7 +1165,7 @@ function StoryboardProperties({
               </div>
               <p className="mt-1 text-xs">{shot.description}</p>
               {shot.dialogue && (
-                <p className="mt-1 text-xs italic text-muted-foreground">"{shot.dialogue}"</p>
+                <p className="mt-1 text-xs italic text-muted-foreground">{`"${shot.dialogue}"`}</p>
               )}
             </div>
           ))}

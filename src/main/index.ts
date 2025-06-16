@@ -1,13 +1,18 @@
-import { app, shell, BrowserWindow, ipcMain } from 'electron'
+import { electronApp, is, optimizer } from '@electron-toolkit/utils'
+import { app, BrowserWindow, ipcMain, shell } from 'electron'
+import { screen } from 'electron/main'
 import { join } from 'path'
-import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
+import { GlobalShortcutService, Theme } from './services/globalShortcuts'
+
+let globalShortcutService: GlobalShortcutService | null = null
 
 function createWindow(): void {
+  const { workArea } = screen.getPrimaryDisplay()
   // Create the browser window.
   const mainWindow = new BrowserWindow({
-    width: 900,
-    height: 670,
+    width: workArea.width,
+    height: workArea.height,
     show: false,
     autoHideMenuBar: true,
     ...(process.platform === 'linux' ? { icon } : {}),
@@ -25,6 +30,9 @@ function createWindow(): void {
     shell.openExternal(details.url)
     return { action: 'deny' }
   })
+
+  // Initialize global shortcut service
+  globalShortcutService = new GlobalShortcutService(mainWindow)
 
   // HMR for renderer base on electron-vite cli.
   // Load the remote URL for development or the local html file for production.
@@ -52,6 +60,46 @@ app.whenReady().then(() => {
   // IPC test
   ipcMain.on('ping', () => console.log('pong'))
 
+  // Theme-related IPC handlers
+  ipcMain.handle('get-current-theme', () => {
+    return globalShortcutService?.getCurrentTheme() || 'system'
+  })
+
+  ipcMain.handle('set-theme', (_, theme: Theme) => {
+    globalShortcutService?.setTheme(theme)
+    return theme
+  })
+
+  // Global shortcuts IPC handlers
+  ipcMain.handle('get-registered-shortcuts', () => {
+    return globalShortcutService?.getRegisteredShortcuts() || []
+  })
+
+  ipcMain.handle(
+    'register-shortcut',
+    (_, id: string, accelerator: string, description?: string) => {
+      if (!globalShortcutService) return false
+
+      return globalShortcutService.registerShortcut(id, {
+        accelerator,
+        callback: () => {
+          // Send shortcut event to renderer
+          const windows = BrowserWindow.getAllWindows()
+          windows.forEach((window) => {
+            if (!window.isDestroyed()) {
+              window.webContents.send('shortcut-triggered', id)
+            }
+          })
+        },
+        description
+      })
+    }
+  )
+
+  ipcMain.handle('unregister-shortcut', (_, id: string) => {
+    return globalShortcutService?.unregisterShortcut(id) || false
+  })
+
   createWindow()
 
   app.on('activate', function () {
@@ -68,6 +116,11 @@ app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {
     app.quit()
   }
+})
+
+// Clean up global shortcuts when app is quitting
+app.on('will-quit', () => {
+  globalShortcutService?.unregisterAll()
 })
 
 // In this file you can include the rest of your app's specific main process

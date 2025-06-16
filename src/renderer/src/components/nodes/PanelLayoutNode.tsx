@@ -109,7 +109,7 @@ export default function PanelLayoutNode({ data, selected }: PanelLayoutNodeProps
                 >
                   <span>Panel {index + 1}</span>
                   <span className="text-muted-foreground">
-                    {panel.position.width}×{panel.position.height}
+                    {panel.position?.width || 100}×{panel.position?.height || 100}
                   </span>
                 </div>
               ))}

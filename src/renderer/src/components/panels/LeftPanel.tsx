@@ -193,12 +193,12 @@ export function LeftPanel({ activeTab, onTabChange, project }: LeftPanelProps) {
         <TabsContent value="nodes" className="flex-1 p-0">
           <div className="border-b border-border p-3">
             <div className="relative">
-              <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Search className="absolute left-2 top-[50%] -translate-y-[50%] h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="Search nodes..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
                 className="pl-8"
+                value={searchQuery}
+                placeholder="Search nodes..."
+                onChange={(e) => setSearchQuery(e.target.value)}
               />
             </div>
           </div>

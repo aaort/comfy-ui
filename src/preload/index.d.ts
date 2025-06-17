@@ -26,10 +26,25 @@ export interface StorageAPI {
   removeMultiple: (keys: string[]) => Promise<void>
 }
 
+export interface FileAPI {
+  showOpenDialog: (options: {
+    title?: string
+    filters?: Array<{ name: string; extensions: string[] }>
+    properties?: Array<'openFile' | 'openDirectory' | 'multiSelections' | 'showHiddenFiles'>
+  }) => Promise<{ canceled: boolean; filePaths: string[] }>
+  readFile: (filePath: string) => Promise<{
+    success: boolean
+    data?: string
+    path?: string
+    error?: string
+  }>
+}
+
 export interface API {
   theme: ThemeAPI
   shortcuts: ShortcutsAPI
   storage: StorageAPI
+  file: FileAPI
 }
 
 declare global {

@@ -1,6 +1,7 @@
 import { electronApp, is, optimizer } from '@electron-toolkit/utils'
-import { app, BrowserWindow, ipcMain, shell } from 'electron'
+import { app, BrowserWindow, dialog, ipcMain, shell } from 'electron'
 import { screen } from 'electron/main'
+import { readFile } from 'fs/promises'
 import { join } from 'path'
 import icon from '../../resources/icon.png?asset'
 import { GlobalShortcutService, Theme } from './services/globalShortcuts'
@@ -139,6 +140,28 @@ app.whenReady().then(() => {
     return true
   })
 
+  // File dialog IPC handlers
+  ipcMain.handle('show-open-dialog', async (_, options) => {
+    const result = await dialog.showOpenDialog(options)
+    return result
+  })
+
+  ipcMain.handle('read-file', async (_, filePath: string) => {
+    try {
+      const data = await readFile(filePath)
+      return {
+        success: true,
+        data: `data:${getFileType(filePath)};base64,${data.toString('base64')}`,
+        path: filePath
+      }
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error'
+      }
+    }
+  })
+
   createWindow()
 
   app.on('activate', function () {
@@ -161,6 +184,28 @@ app.on('window-all-closed', () => {
 app.on('will-quit', () => {
   globalShortcutService?.unregisterAll()
 })
+
+// Helper function to get MIME type from file extension
+function getFileType(filePath: string): string {
+  const ext = filePath.toLowerCase().split('.').pop()
+  switch (ext) {
+    case 'jpg':
+    case 'jpeg':
+      return 'image/jpeg'
+    case 'png':
+      return 'image/png'
+    case 'gif':
+      return 'image/gif'
+    case 'webp':
+      return 'image/webp'
+    case 'bmp':
+      return 'image/bmp'
+    case 'svg':
+      return 'image/svg+xml'
+    default:
+      return 'application/octet-stream'
+  }
+}
 
 // In this file you can include the rest of your app's specific main process
 // code. You can also put them in separate files and require them here.

@@ -40,6 +40,16 @@ const api = {
       ipcRenderer.invoke('storage-set-multiple', data),
     removeMultiple: (keys: string[]): Promise<void> =>
       ipcRenderer.invoke('storage-remove-multiple', keys)
+  },
+
+  // File API
+  file: {
+    showOpenDialog: (options: {
+      title?: string
+      filters?: Array<{ name: string; extensions: string[] }>
+      properties?: Array<'openFile' | 'openDirectory' | 'multiSelections' | 'showHiddenFiles'>
+    }) => ipcRenderer.invoke('show-open-dialog', options),
+    readFile: (filePath: string) => ipcRenderer.invoke('read-file', filePath)
   }
 }
 

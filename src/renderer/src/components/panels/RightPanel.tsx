@@ -1,6 +1,7 @@
 import { Download, Save, Upload } from 'lucide-react'
 import { useCallback, useState } from 'react'
 import { Node } from 'reactflow'
+import { useFileHandler } from '../../hooks/useFileHandler'
 import {
   CharacterNodeData,
   DialogueNodeData,
@@ -398,19 +399,40 @@ function TextPromptProperties({
 }
 
 function ImageInputProperties({
-  node
+  node,
+  onUpdate
 }: {
   node: WorkflowNode
   onUpdate: (id: string, data: Partial<ImageInputNodeData>) => void
 }) {
   const data = node.data as unknown as ImageInputNodeData
+  const { openFileDialog } = useFileHandler()
+
+  const handleUploadClick = async () => {
+    const result = await openFileDialog({
+      title: 'Select Image',
+      filters: [
+        {
+          name: 'Images',
+          extensions: ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'svg']
+        }
+      ]
+    })
+
+    if (result?.success && result.data) {
+      onUpdate(node.id, {
+        imageData: result.data,
+        imagePath: result.path
+      })
+    }
+  }
 
   return (
     <div className="space-y-4 p-4">
       <div>
         <Label>Image Source</Label>
         <div className="mt-2 space-y-2">
-          <Button className="w-full" size="sm" variant="outline">
+          <Button className="w-full" size="sm" variant="outline" onClick={handleUploadClick}>
             <Upload className="mr-2 h-4 w-4" />
             Upload Image
           </Button>

@@ -15,9 +15,21 @@ export interface ShortcutsAPI {
   onTriggered: (callback: (shortcutId: string) => void) => () => void
 }
 
+export interface StorageAPI {
+  get: <T = unknown>(key: string) => Promise<T | null>
+  set: <T = unknown>(key: string, value: T) => Promise<void>
+  remove: (key: string) => Promise<void>
+  clear: () => Promise<void>
+  has: (key: string) => Promise<boolean>
+  getAll: () => Promise<Record<string, unknown>>
+  setMultiple: (data: Record<string, unknown>) => Promise<void>
+  removeMultiple: (keys: string[]) => Promise<void>
+}
+
 export interface API {
   theme: ThemeAPI
   shortcuts: ShortcutsAPI
+  storage: StorageAPI
 }
 
 declare global {

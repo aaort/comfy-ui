@@ -25,6 +25,21 @@ const api = {
       ipcRenderer.on('shortcut-triggered', handler)
       return () => ipcRenderer.removeListener('shortcut-triggered', handler)
     }
+  },
+
+  // Storage API
+  storage: {
+    get: <T = unknown>(key: string): Promise<T | null> => ipcRenderer.invoke('storage-get', key),
+    set: <T = unknown>(key: string, value: T): Promise<void> =>
+      ipcRenderer.invoke('storage-set', key, value),
+    remove: (key: string): Promise<void> => ipcRenderer.invoke('storage-remove', key),
+    clear: (): Promise<void> => ipcRenderer.invoke('storage-clear'),
+    has: (key: string): Promise<boolean> => ipcRenderer.invoke('storage-has', key),
+    getAll: (): Promise<Record<string, unknown>> => ipcRenderer.invoke('storage-get-all'),
+    setMultiple: (data: Record<string, unknown>): Promise<void> =>
+      ipcRenderer.invoke('storage-set-multiple', data),
+    removeMultiple: (keys: string[]): Promise<void> =>
+      ipcRenderer.invoke('storage-remove-multiple', keys)
   }
 }
 

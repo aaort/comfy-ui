@@ -21,8 +21,10 @@ import { LeftPanel } from './components/panels/LeftPanel'
 import { RightPanel } from './components/panels/RightPanel'
 import { TopToolbar } from './components/panels/TopToolbar'
 
+import { StorageProvider } from './contexts/StorageProvider'
 import { ThemeProvider } from './contexts/ThemeProvider'
 import { useGlobalShortcuts } from './hooks/useGlobalShortcuts'
+import { usePersistentState } from './hooks/usePersistentState'
 
 // Import custom nodes
 import CharacterNode from './components/nodes/CharacterNode'
@@ -62,6 +64,9 @@ function AppContent() {
 
   // Project state
   const [currentProject, setCurrentProject] = useState<Project | null>(null)
+
+  // Persistent zoom state for timeline (managed at app level for persistence)
+  const [timelineZoom, setTimelineZoom] = usePersistentState('timeline-zoom', 0.5)
 
   // Canvas state with example nodes
   const initialNodes: WorkflowNode[] = [
@@ -361,6 +366,8 @@ function AppContent() {
               }))
             }
             project={currentProject}
+            zoom={timelineZoom}
+            onZoomChange={setTimelineZoom}
           />
         )}
       </div>
@@ -370,9 +377,11 @@ function AppContent() {
 
 function App() {
   return (
-    <ThemeProvider>
-      <AppContent />
-    </ThemeProvider>
+    <StorageProvider>
+      <ThemeProvider>
+        <AppContent />
+      </ThemeProvider>
+    </StorageProvider>
   )
 }
 

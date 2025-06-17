@@ -1,7 +1,9 @@
 import React, { useCallback, useEffect, useState } from 'react'
+import { useStorage } from './StorageContext'
 import { Theme, ThemeContext } from './ThemeContext'
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
+  const storage = useStorage()
   const [theme, setThemeState] = useState<Theme>('system')
   const [actualTheme, setActualTheme] = useState<'light' | 'dark'>('light')
 
@@ -18,10 +20,11 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     return currentTheme
   }, [])
 
-  // Update theme in main process and local state
+  // Update theme in main process, local state, and persistent storage
   const setTheme = async (newTheme: Theme) => {
     try {
       await window.api.theme.set(newTheme)
+      await storage.set('app-theme', newTheme)
       setThemeState(newTheme)
     } catch (error) {
       console.error('Failed to set theme:', error)
@@ -36,11 +39,18 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     setActualTheme(resolvedTheme)
   }
 
-  // Initialize theme from main process
+  // Initialize theme from storage or main process
   useEffect(() => {
     const initTheme = async () => {
       try {
-        const currentTheme = await window.api.theme.getCurrent()
+        // First try to get from storage
+        let currentTheme = await storage.get<Theme>('app-theme')
+
+        // Fallback to main process if not in storage
+        if (!currentTheme) {
+          currentTheme = await window.api.theme.getCurrent()
+        }
+
         setThemeState(currentTheme)
         const resolved = resolveTheme(currentTheme)
         applyTheme(resolved)
@@ -53,7 +63,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     }
 
     initTheme()
-  }, [resolveTheme])
+  }, [resolveTheme, storage])
 
   // Listen for theme changes from main process (e.g., from global shortcut)
   useEffect(() => {

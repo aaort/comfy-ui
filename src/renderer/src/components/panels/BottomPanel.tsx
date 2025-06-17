@@ -10,6 +10,8 @@ interface BottomPanelProps {
   height: number
   onHeightChange: (height: number) => void
   project: Project | null
+  zoom: number
+  onZoomChange: (zoom: number) => void
 }
 
 interface TimelineFrame {
@@ -20,10 +22,9 @@ interface TimelineFrame {
   type: 'panel' | 'transition' | 'effect'
 }
 
-export function BottomPanel({ height, onHeightChange }: BottomPanelProps) {
+export function BottomPanel({ height, onHeightChange, zoom, onZoomChange }: BottomPanelProps) {
   const [isPlaying, setIsPlaying] = useState(false)
   const [currentTime, setCurrentTime] = useState(0)
-  const [zoom, setZoom] = useState(1)
   const [selectedFrames, setSelectedFrames] = useState<string[]>([])
   const resizeHandleRef = useRef<HTMLDivElement>(null)
   const timelineRef = useRef<HTMLDivElement>(null)
@@ -159,13 +160,13 @@ export function BottomPanel({ height, onHeightChange }: BottomPanelProps) {
             size="icon"
             variant="ghost"
             className="h-6 w-6"
-            onClick={() => setZoom(Math.max(0.5, zoom - 0.25))}
+            onClick={() => onZoomChange(Math.max(0.5, zoom - 0.25))}
           >
             <ZoomOut className="h-3 w-3" />
           </Button>
           <Slider
             value={[zoom]}
-            onValueChange={([value]) => setZoom(value)}
+            onValueChange={([value]) => onZoomChange(value)}
             min={0.5}
             max={3}
             step={0.25}
@@ -175,7 +176,7 @@ export function BottomPanel({ height, onHeightChange }: BottomPanelProps) {
             size="icon"
             variant="ghost"
             className="h-6 w-6"
-            onClick={() => setZoom(Math.min(3, zoom + 0.25))}
+            onClick={() => onZoomChange(Math.min(3, zoom + 0.25))}
           >
             <ZoomIn className="h-3 w-3" />
           </Button>

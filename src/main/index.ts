@@ -4,6 +4,7 @@ import { screen } from 'electron/main'
 import { join } from 'path'
 import icon from '../../resources/icon.png?asset'
 import { GlobalShortcutService, Theme } from './services/globalShortcuts'
+import { storageService } from './services/storageService'
 
 let globalShortcutService: GlobalShortcutService | null = null
 
@@ -65,8 +66,8 @@ app.whenReady().then(() => {
     return globalShortcutService?.getCurrentTheme() || 'system'
   })
 
-  ipcMain.handle('set-theme', (_, theme: Theme) => {
-    globalShortcutService?.setTheme(theme)
+  ipcMain.handle('set-theme', async (_, theme: Theme) => {
+    await globalShortcutService?.setTheme(theme)
     return theme
   })
 
@@ -98,6 +99,44 @@ app.whenReady().then(() => {
 
   ipcMain.handle('unregister-shortcut', (_, id: string) => {
     return globalShortcutService?.unregisterShortcut(id) || false
+  })
+
+  // Storage service IPC handlers
+  ipcMain.handle('storage-get', async (_, key: string) => {
+    return await storageService.get(key)
+  })
+
+  ipcMain.handle('storage-set', async (_, key: string, value: unknown) => {
+    await storageService.set(key, value)
+    return true
+  })
+
+  ipcMain.handle('storage-remove', async (_, key: string) => {
+    await storageService.remove(key)
+    return true
+  })
+
+  ipcMain.handle('storage-clear', async () => {
+    await storageService.clear()
+    return true
+  })
+
+  ipcMain.handle('storage-has', async (_, key: string) => {
+    return await storageService.has(key)
+  })
+
+  ipcMain.handle('storage-get-all', async () => {
+    return await storageService.getAll()
+  })
+
+  ipcMain.handle('storage-set-multiple', async (_, data: Record<string, unknown>) => {
+    await storageService.setMultiple(data)
+    return true
+  })
+
+  ipcMain.handle('storage-remove-multiple', async (_, keys: string[]) => {
+    await storageService.removeMultiple(keys)
+    return true
   })
 
   createWindow()

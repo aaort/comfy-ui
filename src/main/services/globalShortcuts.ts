@@ -1,4 +1,5 @@
 import { BrowserWindow, globalShortcut } from 'electron'
+import { storageService } from './storageService'
 
 export type Theme = 'light' | 'dark' | 'system'
 
@@ -16,6 +17,18 @@ export class GlobalShortcutService {
   constructor(mainWindow: BrowserWindow) {
     this.mainWindow = mainWindow
     this.setupDefaultShortcuts()
+    this.loadTheme()
+  }
+
+  private async loadTheme(): Promise<void> {
+    try {
+      const savedTheme = await storageService.get<Theme>('app-theme')
+      if (savedTheme) {
+        this.currentTheme = savedTheme
+      }
+    } catch (error) {
+      console.error('Failed to load theme from storage:', error)
+    }
   }
 
   private setupDefaultShortcuts(): void {
@@ -68,7 +81,7 @@ export class GlobalShortcutService {
     console.log('All global shortcuts unregistered')
   }
 
-  private toggleTheme(): void {
+  private async toggleTheme(): Promise<void> {
     // Cycle through themes: system -> light -> dark -> system
     const themes: Theme[] = ['system', 'light', 'dark']
     const currentIndex = themes.indexOf(this.currentTheme)
@@ -76,6 +89,13 @@ export class GlobalShortcutService {
     this.currentTheme = themes[nextIndex]
 
     console.log(`Theme switched to: ${this.currentTheme}`)
+
+    // Save to storage
+    try {
+      await storageService.set('app-theme', this.currentTheme)
+    } catch (error) {
+      console.error('Failed to save theme to storage:', error)
+    }
 
     // Notify renderer process about theme change
     if (this.mainWindow && !this.mainWindow.isDestroyed()) {
@@ -87,10 +107,17 @@ export class GlobalShortcutService {
     return this.currentTheme
   }
 
-  setTheme(theme: Theme): void {
+  async setTheme(theme: Theme): Promise<void> {
     if (theme !== this.currentTheme) {
       this.currentTheme = theme
       console.log(`Theme set to: ${this.currentTheme}`)
+
+      // Save to storage
+      try {
+        await storageService.set('app-theme', this.currentTheme)
+      } catch (error) {
+        console.error('Failed to save theme to storage:', error)
+      }
 
       // Notify renderer process about theme change
       if (this.mainWindow && !this.mainWindow.isDestroyed()) {

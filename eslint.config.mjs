@@ -24,6 +24,7 @@ export default tseslint.config(
     },
     rules: {
       '@typescript-eslint/explicit-function-return-type': ['off'],
+      'eslint react-refresh/only-export-components': ['warn'],
       ...eslintPluginReactHooks.configs.recommended.rules,
       ...eslintPluginReactRefresh.configs.vite.rules
     }

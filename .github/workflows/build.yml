@@ -2,9 +2,9 @@ name: Build
 
 on:
   push:
-    branches: [ main, master, develop ]
+    branches: [main, master, develop]
   pull_request:
-    branches: [ main, master, develop ]
+    branches: [main, master, develop]
 
 jobs:
   build:
@@ -31,37 +31,19 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-
-      - name: Install pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: 10.12.1
-          run_install: false
-
-      - name: Get pnpm store directory
-        shell: bash
-        run: |
-          echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
-
-      - name: Setup pnpm cache
-        uses: actions/cache@v4
-        with:
-          path: ${{ env.STORE_PATH }}
-          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
-          restore-keys: |
-            ${{ runner.os }}-pnpm-store-
+          cache: 'npm'
 
       - name: Install dependencies
-        run: pnpm install
+        run: npm ci
 
       - name: Run linting
-        run: pnpm run lint
+        run: npm run lint
 
       - name: Run type checking
-        run: pnpm run typecheck
+        run: npm run typecheck
 
       - name: Build Electron app
-        run: pnpm run ${{ matrix.build_cmd }}
+        run: npm run ${{ matrix.build_cmd }}
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: false
 

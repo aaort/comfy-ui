@@ -1,0 +1,164 @@
+name: Build and Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Release tag (e.g., v1.0.0)'
+        required: true
+        type: string
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        include:
+          - os: macos-latest
+            platform: mac
+            build_cmd: build:mac
+            artifact_ext: '*.dmg'
+          - os: windows-latest
+            platform: win
+            build_cmd: build:win
+            artifact_ext: '*-setup.exe'
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.12.1
+          run_install: false
+
+      - name: Get pnpm store directory
+        shell: bash
+        run: |
+          echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
+
+      - name: Setup pnpm cache
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.STORE_PATH }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-
+
+      - name: Install dependencies
+        run: pnpm install
+
+      - name: Build Electron app
+        run: pnpm run ${{ matrix.build_cmd }}
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: false
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.platform }}-build
+          path: dist/${{ matrix.artifact_ext }}
+          retention-days: 7
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Display structure of downloaded files
+        run: ls -la artifacts/*/
+
+      - name: Generate changelog
+        id: changelog
+        run: |
+          # Get the current tag
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            CURRENT_TAG="${{ github.event.inputs.tag }}"
+          else
+            CURRENT_TAG="${{ github.ref_name }}"
+          fi
+
+          # Get the previous tag
+          PREVIOUS_TAG=$(git describe --tags --abbrev=0 $CURRENT_TAG^ 2>/dev/null || echo "")
+
+          # Generate changelog content
+          {
+            echo "## What's Changed"
+            echo ""
+
+            if [ -z "$PREVIOUS_TAG" ]; then
+              echo "### Initial Release 🎉"
+              echo ""
+              git log --pretty=format:"- %s (%an) [%h](https://github.com/${{ github.repository }}/commit/%H)" | head -50
+            else
+              echo "### Commits since ${PREVIOUS_TAG}"
+              echo ""
+              git log ${PREVIOUS_TAG}..${CURRENT_TAG} --pretty=format:"- %s (%an) [%h](https://github.com/${{ github.repository }}/commit/%H)"
+              echo ""
+              echo ""
+
+              # Add commit statistics
+              STATS=$(git diff ${PREVIOUS_TAG}..${CURRENT_TAG} --shortstat)
+              if [ ! -z "$STATS" ]; then
+                echo "### Statistics"
+                echo "- $STATS"
+                echo ""
+              fi
+
+              # Add contributors
+              echo "### Contributors"
+              git log ${PREVIOUS_TAG}..${CURRENT_TAG} --pretty=format:"%an" | sort | uniq | sed 's/^/- @/'
+              echo ""
+              echo ""
+
+              echo "**Full Changelog**: https://github.com/${{ github.repository }}/compare/${PREVIOUS_TAG}...${CURRENT_TAG}"
+            fi
+          } > release_notes.md
+
+          # Display the changelog for debugging
+          echo "Generated changelog:"
+          cat release_notes.md
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.tag || github.ref_name }}
+          name: Release ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.tag || github.ref_name }}
+          body_path: release_notes.md
+          draft: false
+          prerelease: ${{ contains(github.ref_name, '-beta') || contains(github.ref_name, '-alpha') || contains(github.ref_name, '-rc') }}
+          files: |
+            artifacts/mac-build/*.dmg
+            artifacts/win-build/*-setup.exe
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Clean up artifacts
+        uses: geekyeggo/delete-artifact@v5
+        with:
+          name: |
+            mac-build
+            win-build

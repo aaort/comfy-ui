@@ -107,6 +107,14 @@ jobs:
           # Get the previous tag
           PREVIOUS_TAG=$(git tag --sort=-version:refname | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+' | grep -v "$TAG" | head -1 || echo "")
 
+          # Check if any tags exist at all
+          if [ -z "$PREVIOUS_TAG" ]; then
+            ALL_TAGS=$(git tag --sort=-version:refname | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+' || echo "")
+            if [ -z "$ALL_TAGS" ]; then
+              echo "No previous tags found. This will be the first release."
+            fi
+          fi
+
           # Generate changelog
           {
             echo "## Release $TAG"
@@ -124,7 +132,11 @@ jobs:
               echo ""
 
               # Features
-              FEATURES=$(git log ${PREVIOUS_TAG}..HEAD --pretty=format:"%s|%an|%h|%H" | grep -iE "^feat:|feature:" || true)
+              if [ -z "$PREVIOUS_TAG" ]; then
+                FEATURES=$(git log HEAD --pretty=format:"%s|%an|%h|%H" | grep -iE "^feat:|feature:" || true)
+              else
+                FEATURES=$(git log ${PREVIOUS_TAG}..HEAD --pretty=format:"%s|%an|%h|%H" | grep -iE "^feat:|feature:" || true)
+              fi
               if [ ! -z "$FEATURES" ]; then
                 echo "#### 🚀 Features"
                 echo "$FEATURES" | while IFS='|' read -r msg author hash full_hash; do
@@ -135,7 +147,11 @@ jobs:
               fi
 
               # Bug fixes
-              FIXES=$(git log ${PREVIOUS_TAG}..HEAD --pretty=format:"%s|%an|%h|%H" | grep -iE "^fix:|bugfix:" || true)
+              if [ -z "$PREVIOUS_TAG" ]; then
+                FIXES=$(git log HEAD --pretty=format:"%s|%an|%h|%H" | grep -iE "^fix:|bugfix:" || true)
+              else
+                FIXES=$(git log ${PREVIOUS_TAG}..HEAD --pretty=format:"%s|%an|%h|%H" | grep -iE "^fix:|bugfix:" || true)
+              fi
               if [ ! -z "$FIXES" ]; then
                 echo "#### 🐛 Bug Fixes"
                 echo "$FIXES" | while IFS='|' read -r msg author hash full_hash; do
@@ -146,7 +162,11 @@ jobs:
               fi
 
               # Other changes
-              OTHER=$(git log ${PREVIOUS_TAG}..HEAD --pretty=format:"%s|%an|%h|%H" | grep -viE "^(feat:|feature:|fix:|bugfix:|chore:)" || true)
+              if [ -z "$PREVIOUS_TAG" ]; then
+                OTHER=$(git log HEAD --pretty=format:"%s|%an|%h|%H" | grep -viE "^(feat:|feature:|fix:|bugfix:|chore:)" || true)
+              else
+                OTHER=$(git log ${PREVIOUS_TAG}..HEAD --pretty=format:"%s|%an|%h|%H" | grep -viE "^(feat:|feature:|fix:|bugfix:|chore:)" || true)
+              fi
               if [ ! -z "$OTHER" ]; then
                 echo "#### 📝 Other Changes"
                 echo "$OTHER" | while IFS='|' read -r msg author hash full_hash; do
@@ -157,19 +177,31 @@ jobs:
 
               # Statistics
               echo "### 📊 Statistics"
-              STATS=$(git diff ${PREVIOUS_TAG}..HEAD --shortstat)
-              echo "- $STATS"
-              echo "- Commits: $(git rev-list ${PREVIOUS_TAG}..HEAD --count)"
+              if [ -z "$PREVIOUS_TAG" ]; then
+                STATS=$(git diff --shortstat $(git rev-list --max-parents=0 HEAD)..HEAD)
+                echo "- $STATS"
+                echo "- Commits: $(git rev-list HEAD --count)"
+              else
+                STATS=$(git diff ${PREVIOUS_TAG}..HEAD --shortstat)
+                echo "- $STATS"
+                echo "- Commits: $(git rev-list ${PREVIOUS_TAG}..HEAD --count)"
+              fi
               echo ""
 
               # Contributors
               echo "### 👥 Contributors"
-              git log ${PREVIOUS_TAG}..HEAD --pretty=format:"%an" | sort | uniq | while read author; do
-                echo "- @$author"
-              done
+              if [ -z "$PREVIOUS_TAG" ]; then
+                git log HEAD --pretty=format:"%an" | sort | uniq | while read author; do
+                  echo "- @$author"
+                done
+              else
+                git log ${PREVIOUS_TAG}..HEAD --pretty=format:"%an" | sort | uniq | while read author; do
+                  echo "- @$author"
+                done
+                echo ""
+                echo "**Full Changelog**: https://github.com/${{ github.repository }}/compare/${PREVIOUS_TAG}...${TAG}"
+              fi
               echo ""
-
-              echo "**Full Changelog**: https://github.com/${{ github.repository }}/compare/${PREVIOUS_TAG}...${TAG}"
             fi
           } > release_notes.md
 

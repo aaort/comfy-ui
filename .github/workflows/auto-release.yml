@@ -39,11 +39,16 @@ jobs:
         id: check
         run: |
           # Get the latest tag
-          LATEST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
-          echo "Latest tag: $LATEST_TAG"
+          LATEST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
 
-          # Count commits since last tag
-          COMMIT_COUNT=$(git rev-list ${LATEST_TAG}..HEAD --count)
+          if [ -z "$LATEST_TAG" ]; then
+            echo "No previous tags found. This will be the first release."
+            COMMIT_COUNT=$(git rev-list HEAD --count)
+          else
+            echo "Latest tag: $LATEST_TAG"
+            COMMIT_COUNT=$(git rev-list ${LATEST_TAG}..HEAD --count)
+          fi
+
           echo "Commits since last tag: $COMMIT_COUNT"
 
           if [ $COMMIT_COUNT -gt 0 ]; then
@@ -57,10 +62,14 @@ jobs:
         if: steps.check.outputs.should_release == 'true'
         run: |
           # Analyze commit messages to determine version bump
-          LATEST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
+          LATEST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
 
-          # Get all commit messages since last tag
-          COMMITS=$(git log ${LATEST_TAG}..HEAD --pretty=format:"%s")
+          # Get all commit messages since last tag or all commits if no tag
+          if [ -z "$LATEST_TAG" ]; then
+            COMMITS=$(git log --pretty=format:"%s")
+          else
+            COMMITS=$(git log ${LATEST_TAG}..HEAD --pretty=format:"%s")
+          fi
 
           # Default to patch bump
           BUMP_TYPE="patch"
@@ -166,18 +175,30 @@ jobs:
             if [ -z "$LATEST_TAG" ]; then
               echo "### Initial Release 🎉"
               echo ""
-              git log --pretty=format:"- %s (%an) [%h](https://github.com/${{ github.repository }}/commit/%H)" | head -50
+              echo "This is the first release of Cozy UI!"
+              echo ""
+              echo "### All Features"
+              git log --pretty=format:"%s|%an|%h|%H" | grep -iE "^feat:|feature:" | while IFS='|' read -r msg author hash full_hash; do
+                clean_msg=$(echo "${msg#*:}" | sed 's/^ *//')
+                echo "- $clean_msg ($author) [${hash}](https://github.com/${{ github.repository }}/commit/${full_hash})"
+              done || true
+              echo ""
+
+              echo "### Recent Commits"
+              git log --pretty=format:"- %s (%an) [%h](https://github.com/${{ github.repository }}/commit/%H)" | head -20
             else
               # Categorize commits
               echo "### Features"
               git log ${LATEST_TAG}..HEAD --pretty=format:"%s|%an|%h|%H" | grep -iE "^feat:|feature:" | while IFS='|' read -r msg author hash full_hash; do
-                echo "- ${msg#*:} ($author) [${hash}](https://github.com/${{ github.repository }}/commit/${full_hash})"
+                clean_msg=$(echo "${msg#*:}" | sed 's/^ *//')
+                echo "- $clean_msg ($author) [${hash}](https://github.com/${{ github.repository }}/commit/${full_hash})"
               done || echo "- No new features"
               echo ""
 
               echo "### Bug Fixes"
               git log ${LATEST_TAG}..HEAD --pretty=format:"%s|%an|%h|%H" | grep -iE "^fix:|bugfix:" | while IFS='|' read -r msg author hash full_hash; do
-                echo "- ${msg#*:} ($author) [${hash}](https://github.com/${{ github.repository }}/commit/${full_hash})"
+                clean_msg=$(echo "${msg#*:}" | sed 's/^ *//')
+                echo "- $clean_msg ($author) [${hash}](https://github.com/${{ github.repository }}/commit/${full_hash})"
               done || echo "- No bug fixes"
               echo ""
 

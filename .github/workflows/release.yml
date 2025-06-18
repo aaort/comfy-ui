@@ -13,19 +13,7 @@ on:
 
 jobs:
   build:
-    strategy:
-      matrix:
-        include:
-          - os: macos-latest
-            platform: mac
-            build_cmd: build:mac
-            artifact_ext: '*.dmg'
-          - os: windows-latest
-            platform: win
-            build_cmd: build:win
-            artifact_ext: '*-setup.exe'
-
-    runs-on: ${{ matrix.os }}
+    runs-on: macos-latest
 
     steps:
       - name: Checkout code
@@ -60,15 +48,15 @@ jobs:
         run: pnpm install
 
       - name: Build Electron app
-        run: pnpm run ${{ matrix.build_cmd }}
+        run: pnpm run build:mac
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: false
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ matrix.platform }}-build
-          path: dist/${{ matrix.artifact_ext }}
+          name: mac-build
+          path: dist/*.dmg
           retention-days: 7
 
   release:
@@ -83,13 +71,14 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Download all artifacts
+      - name: Download artifacts
         uses: actions/download-artifact@v4
         with:
+          name: mac-build
           path: artifacts
 
       - name: Display structure of downloaded files
-        run: ls -la artifacts/*/
+        run: ls -la artifacts/
 
       - name: Generate changelog
         id: changelog
@@ -151,13 +140,10 @@ jobs:
           draft: false
           prerelease: ${{ contains(github.ref_name, '-beta') || contains(github.ref_name, '-alpha') || contains(github.ref_name, '-rc') }}
           files: |
-            artifacts/mac-build/*.dmg
-            artifacts/win-build/*-setup.exe
+            artifacts/*.dmg
           token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Clean up artifacts
         uses: geekyeggo/delete-artifact@v5
         with:
-          name: |
-            mac-build
-            win-build
+          name: mac-build

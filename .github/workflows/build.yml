@@ -8,20 +8,7 @@ on:
 
 jobs:
   build:
-    strategy:
-      matrix:
-        include:
-          - os: macos-latest
-            platform: mac
-            build_cmd: build:mac
-          - os: windows-latest
-            platform: win
-            build_cmd: build:win
-          - os: ubuntu-latest
-            platform: linux
-            build_cmd: build:linux
-
-    runs-on: ${{ matrix.os }}
+    runs-on: macos-latest
 
     steps:
       - name: Checkout code
@@ -60,7 +47,7 @@ jobs:
         run: pnpm run typecheck
 
       - name: Build Electron app
-        run: pnpm run ${{ matrix.build_cmd }}
+        run: pnpm run build:mac
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: false
 
@@ -68,11 +55,9 @@ jobs:
         uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: ${{ matrix.platform }}-build-${{ github.sha }}
+          name: mac-build-${{ github.sha }}
           path: |
-            dist/**/*
-            !dist/**/*.yml
-            !dist/**/builder-debug.yml
-            !dist/**/*.yaml
-            !dist/**/builder-effective-config.yaml
+            dist/**/*.dmg
+            dist/**/*.zip
+            dist/**/*.blockmap
           retention-days: 1

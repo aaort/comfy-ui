@@ -1,4 +1,4 @@
-name: Build and Release
+name: Manual Release
 
 on:
   push:
@@ -6,20 +6,53 @@ on:
       - 'v*.*.*'
   workflow_dispatch:
     inputs:
-      tag:
-        description: 'Release tag (e.g., v1.0.0)'
+      version:
+        description: 'Version to release (without v prefix, e.g., 1.0.0)'
         required: true
         type: string
+      prerelease:
+        description: 'Mark as pre-release'
+        required: false
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
 
 jobs:
-  build:
+  build-and-release:
     runs-on: macos-latest
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+
+      - name: Determine version
+        id: version
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            VERSION="${{ github.event.inputs.version }}"
+            TAG="v${VERSION}"
+            IS_PRERELEASE="${{ github.event.inputs.prerelease }}"
+          else
+            TAG="${{ github.ref_name }}"
+            VERSION="${TAG#v}"
+            # Check if it's a pre-release based on version string
+            if [[ "$VERSION" =~ (alpha|beta|rc|preview) ]]; then
+              IS_PRERELEASE="true"
+            else
+              IS_PRERELEASE="false"
+            fi
+          fi
+
+          echo "version=${VERSION}" >> $GITHUB_OUTPUT
+          echo "tag=${TAG}" >> $GITHUB_OUTPUT
+          echo "is_prerelease=${IS_PRERELEASE}" >> $GITHUB_OUTPUT
+
+          echo "Building version: ${VERSION}"
+          echo "Tag: ${TAG}"
+          echo "Pre-release: ${IS_PRERELEASE}"
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -47,103 +80,121 @@ jobs:
       - name: Install dependencies
         run: pnpm install
 
+      - name: Update version in package.json
+        if: github.event_name == 'workflow_dispatch'
+        run: |
+          # Update package.json with the new version
+          npm version ${{ steps.version.outputs.version }} --no-git-tag-version --allow-same-version
+
       - name: Build Electron app
         run: pnpm run build:mac
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: false
 
-      - name: Upload build artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: mac-build
-          path: dist/*.dmg
-          retention-days: 7
-
-  release:
-    needs: build
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Download artifacts
-        uses: actions/download-artifact@v4
-        with:
-          name: mac-build
-          path: artifacts
-
-      - name: Display structure of downloaded files
-        run: ls -la artifacts/
+      - name: List build artifacts
+        run: |
+          echo "Contents of dist directory:"
+          ls -la dist/
+          echo ""
+          echo "DMG files found:"
+          find dist -name "*.dmg" -type f
 
       - name: Generate changelog
         id: changelog
         run: |
-          # Get the current tag
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            CURRENT_TAG="${{ github.event.inputs.tag }}"
-          else
-            CURRENT_TAG="${{ github.ref_name }}"
-          fi
+          TAG="${{ steps.version.outputs.tag }}"
 
           # Get the previous tag
-          PREVIOUS_TAG=$(git describe --tags --abbrev=0 $CURRENT_TAG^ 2>/dev/null || echo "")
+          PREVIOUS_TAG=$(git tag --sort=-version:refname | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+' | grep -v "$TAG" | head -1 || echo "")
 
-          # Generate changelog content
+          # Generate changelog
           {
-            echo "## What's Changed"
+            echo "## Release $TAG"
             echo ""
 
             if [ -z "$PREVIOUS_TAG" ]; then
               echo "### Initial Release 🎉"
               echo ""
+              echo "First release of Cozy UI!"
+              echo ""
+              echo "### All Commits"
               git log --pretty=format:"- %s (%an) [%h](https://github.com/${{ github.repository }}/commit/%H)" | head -50
             else
-              echo "### Commits since ${PREVIOUS_TAG}"
-              echo ""
-              git log ${PREVIOUS_TAG}..${CURRENT_TAG} --pretty=format:"- %s (%an) [%h](https://github.com/${{ github.repository }}/commit/%H)"
-              echo ""
+              echo "### What's Changed"
               echo ""
 
-              # Add commit statistics
-              STATS=$(git diff ${PREVIOUS_TAG}..${CURRENT_TAG} --shortstat)
-              if [ ! -z "$STATS" ]; then
-                echo "### Statistics"
-                echo "- $STATS"
+              # Features
+              FEATURES=$(git log ${PREVIOUS_TAG}..HEAD --pretty=format:"%s|%an|%h|%H" | grep -iE "^feat:|feature:" || true)
+              if [ ! -z "$FEATURES" ]; then
+                echo "#### 🚀 Features"
+                echo "$FEATURES" | while IFS='|' read -r msg author hash full_hash; do
+                  clean_msg=$(echo "${msg#*:}" | sed 's/^ *//')
+                  echo "- $clean_msg ($author) [${hash}](https://github.com/${{ github.repository }}/commit/${full_hash})"
+                done
                 echo ""
               fi
 
-              # Add contributors
-              echo "### Contributors"
-              git log ${PREVIOUS_TAG}..${CURRENT_TAG} --pretty=format:"%an" | sort | uniq | sed 's/^/- @/'
-              echo ""
+              # Bug fixes
+              FIXES=$(git log ${PREVIOUS_TAG}..HEAD --pretty=format:"%s|%an|%h|%H" | grep -iE "^fix:|bugfix:" || true)
+              if [ ! -z "$FIXES" ]; then
+                echo "#### 🐛 Bug Fixes"
+                echo "$FIXES" | while IFS='|' read -r msg author hash full_hash; do
+                  clean_msg=$(echo "${msg#*:}" | sed 's/^ *//')
+                  echo "- $clean_msg ($author) [${hash}](https://github.com/${{ github.repository }}/commit/${full_hash})"
+                done
+                echo ""
+              fi
+
+              # Other changes
+              OTHER=$(git log ${PREVIOUS_TAG}..HEAD --pretty=format:"%s|%an|%h|%H" | grep -viE "^(feat:|feature:|fix:|bugfix:|chore:)" || true)
+              if [ ! -z "$OTHER" ]; then
+                echo "#### 📝 Other Changes"
+                echo "$OTHER" | while IFS='|' read -r msg author hash full_hash; do
+                  echo "- ${msg} ($author) [${hash}](https://github.com/${{ github.repository }}/commit/${full_hash})"
+                done
+                echo ""
+              fi
+
+              # Statistics
+              echo "### 📊 Statistics"
+              STATS=$(git diff ${PREVIOUS_TAG}..HEAD --shortstat)
+              echo "- $STATS"
+              echo "- Commits: $(git rev-list ${PREVIOUS_TAG}..HEAD --count)"
               echo ""
 
-              echo "**Full Changelog**: https://github.com/${{ github.repository }}/compare/${PREVIOUS_TAG}...${CURRENT_TAG}"
+              # Contributors
+              echo "### 👥 Contributors"
+              git log ${PREVIOUS_TAG}..HEAD --pretty=format:"%an" | sort | uniq | while read author; do
+                echo "- @$author"
+              done
+              echo ""
+
+              echo "**Full Changelog**: https://github.com/${{ github.repository }}/compare/${PREVIOUS_TAG}...${TAG}"
             fi
           } > release_notes.md
 
-          # Display the changelog for debugging
-          echo "Generated changelog:"
+          echo "Generated release notes:"
           cat release_notes.md
 
-      - name: Create Release
+      - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.tag || github.ref_name }}
-          name: Release ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.tag || github.ref_name }}
+          tag_name: ${{ steps.version.outputs.tag }}
+          name: ${{ steps.version.outputs.tag }}
           body_path: release_notes.md
           draft: false
-          prerelease: ${{ contains(github.ref_name, '-beta') || contains(github.ref_name, '-alpha') || contains(github.ref_name, '-rc') }}
+          prerelease: ${{ steps.version.outputs.is_prerelease == 'true' }}
           files: |
-            artifacts/*.dmg
+            dist/*.dmg
+          fail_on_unmatched_files: true
           token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Clean up artifacts
-        uses: geekyeggo/delete-artifact@v5
+      - name: Upload artifacts for debugging
+        uses: actions/upload-artifact@v4
+        if: always()
         with:
-          name: mac-build
+          name: release-artifacts-${{ steps.version.outputs.tag }}
+          path: |
+            dist/*.dmg
+            release_notes.md
+          retention-days: 30

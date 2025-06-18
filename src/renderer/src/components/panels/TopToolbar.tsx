@@ -1,3 +1,5 @@
+import { ShortcutsInfo } from '@/components/ui/shortcut-info'
+import { ThemeToggle } from '@/components/ui/theme-toggle'
 import {
   Download,
   FolderOpen,
@@ -30,8 +32,6 @@ import {
   DropdownMenuShortcut,
   DropdownMenuTrigger
 } from '../ui/dropdown-menu'
-import { ShortcutsInfo } from '../ui/ShortcutsInfo'
-import { ThemeToggle } from '../ui/ThemeToggle'
 
 interface TopToolbarProps {
   project: Project | null

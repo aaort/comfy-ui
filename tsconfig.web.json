@@ -13,6 +13,21 @@
     "paths": {
       "@renderer/*": [
         "src/renderer/src/*"
+      ],
+      "@/*": [
+        "src/renderer/src/*"
+      ],
+      "@/components/*": [
+        "src/renderer/src/components/*"
+      ],
+      "@/lib/*": [
+        "src/renderer/src/lib/*"
+      ],
+      "@/hooks/*": [
+        "src/renderer/src/hooks/*"
+      ],
+      "@/ui/*": [
+        "src/renderer/src/components/ui/*"
       ]
     }
   }

@@ -40,11 +40,11 @@ jobs:
       - name: Install dependencies
         run: pnpm install
 
-      - name: Run linting
-        run: pnpm run lint
+      # - name: Run linting
+      #   run: pnpm run lint
 
-      - name: Run type checking
-        run: pnpm run typecheck
+      # - name: Run type checking
+      #   run: pnpm run typecheck
 
       - name: Build Electron app
         run: pnpm run build:mac

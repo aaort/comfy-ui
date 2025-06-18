@@ -2,9 +2,9 @@ name: Build
 
 on:
   push:
-    branches: [ main, master, develop ]
+    branches: [main, master, develop]
   pull_request:
-    branches: [ main, master, develop ]
+    branches: [main, master, develop]
 
 jobs:
   build:
@@ -35,7 +35,6 @@ jobs:
       - name: Install pnpm
         uses: pnpm/action-setup@v4
         with:
-          version: 10.12.1
           run_install: false
 
       - name: Get pnpm store directory
